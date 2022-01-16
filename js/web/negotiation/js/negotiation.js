@@ -63,7 +63,7 @@ let Negotiation = {
 	StartNegotiationBackupData: undefined,
 
 	CONST_Context_GE: 'guildExpedition',
-	CONST_Context_GBG: 'guildBattleground',
+	CONST_Context_GBG: '',
 
 	/**
 	 * Box in den DOM legen
