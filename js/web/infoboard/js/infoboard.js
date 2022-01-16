@@ -354,7 +354,7 @@ let Info = {
 
         return {
             class: 'auction',
-            type: 'Auktion',
+            type: i18n('Boxes.Infobox.FilterAuction'),
             msg: HTML.i18nReplacer(
                 i18n('Boxes.Infobox.Messages.Auction'), {
                     player: PlayerLink,

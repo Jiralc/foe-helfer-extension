@@ -723,9 +723,13 @@ let Parts = {
 		h.push('<th class="text-center"><span class="medal" title="' + HTML.i18nTooltip(i18n('Boxes.OwnpartCalculator.Meds')) + '"></span></th>');
 		h.push('<th class="text-center">' + i18n('Boxes.OwnpartCalculator.Ext') + '</th>');
 		h.push('<th class="text-center">' + i18n('Boxes.OwnpartCalculator.Arc') + '</th>');
+		h.push('<th class="text-center">FP to Snipe</th>');
+		h.push('<th class="text-center">Profit</th>');
         h.push('</tr>');
         h.push('</thead>');
         h.push('<tbody>');
+
+        let j = 0; // index excluding owner
 
         for (let i = 0; i < 5; i++)
         {
@@ -758,7 +762,7 @@ let Parts = {
             {
 				h.push('<td class="text-center"><strong class="' + (PlayerID === ExtPlayerID ? '' : 'success') + '">' + (Parts.Maezens[i] > 0 ? HTML.Format(Parts.Maezens[i]) : '-') + '</strong >' + '</td>');
                 if (LeveltLG[i]) {
-                    h.push('<td class="text-center"><strong class="error">levelt</strong></td>');
+                    h.push('<td class="text-center"><strong class="error">levels</strong></td>');
                 }
                 else if (Dangers[i] > 5) {
 					h.push('<td class="text-center"><strong class="error">danger (' + HTML.Format(Dangers[i]) + 'FP)</strong></td>');
@@ -789,8 +793,41 @@ let Parts = {
 			h.push('<td class="text-center"><input min="0" step="1" type="number" class="ext-part-input' + i + '" value="' + Parts.Exts[i] + '"></td>');
 			h.push('<td class="text-center"><input type="number" class="arc-percent-input" step="0.1" min="12" max="200" value="' + Parts.ArcPercents[i] + '"></td>');
 
+			let fp_reward = FPRewards[i];
+			if (Parts.Rankings && Parts.Rankings[j]) {
+			    if (Parts.Rankings[j].player.player_id == PlayerID) {
+			        j = j + 1;
+			    }
+			    let fp_added = Parts.Rankings[j].forge_points || 0;
+			    let needed_fp = Total;
+			    let owner_contribution = EigenStart
+			    let own_contrib = 0;
+			    let remaining = Total - (EigenStart + ExtTotal);
+			    let fp_to_secure = Math.round((remaining + fp_added - own_contrib)/2) + own_contrib
+			    let profit = fp_reward - fp_to_secure
+
+			    if (fp_to_secure > fp_added) {
+			        h.push('<td class="text-center"><strong class="success">' + HTML.Format(fp_to_secure) + '</strong></td>');
+			    }
+			    else {
+			        h.push('<td class="text-center"><strong class="error">' + HTML.Format(fp_to_secure) + '</strong></td>');
+			    }
+			    if (profit >= 0) {
+			        h.push('<td class="text-center"><strong class="success">' + HTML.Format(profit) + '</strong></td>');
+			    }
+			    else {
+			        h.push('<td class="text-center"><strong class="error">' + HTML.Format(profit) + '</strong></td>');
+			    }
+			} else{
+			    h.push('<td class="text-center"></strong></td>');
+			    h.push('<td class="text-center"></strong></td>');
+			}
+
+			j = j + 1;
+
             h.push('</tr>');
         }
+        console.log(Parts)
 
         let MaezenRest = 0;
 		for (let i = 5; i < Parts.Maezens.length; i++)
@@ -817,7 +854,7 @@ let Parts = {
             h.push('<tr>');
             h.push('<td>' + i18n('Boxes.OwnpartCalculator.OwnPart') + '</td>');
 			h.push('<td class="text-center"><strong class="' + (PlayerID === ExtPlayerID ? 'success' : '') + '">' + Eigens[5] + (EigenCounter > HTML.Format(Eigens[5]) ? ' <small>(=' + HTML.Format(EigenCounter) + ')</small>' : '') + '</strong></td>');
-            h.push('<td colspan="5"></td>');
+            h.push('<td colspan="7"></td>');
             h.push('</tr>');
         }
 
