@@ -742,7 +742,7 @@ let Parts = {
                 h.push('<td>' + i18n('Boxes.OwnpartCalculator.OwnPart') + '</td>');
 				h.push('<td class="text-center"><strong class="' + (PlayerID === ExtPlayerID ? 'success' : '') + '">' + (Eigens[i] > 0 ? HTML.Format(Eigens[i]) + ' <small>(=' + HTML.Format(Eigens[i] + EigenStart) + ')</small>' : '-') + '</strong></td>');
 				h.push('<td class="text-center"><strong class="info">' + HTML.Format(EigenStart) + '</strong></td>');
-                h.push('<td colspan="4"></td>');
+                h.push('<td colspan="6"></td>');
                 h.push('</tr>');
             }
             else {
@@ -750,7 +750,7 @@ let Parts = {
                     h.push('<tr>');
                     h.push('<td>' + i18n('Boxes.OwnpartCalculator.OwnPart') + '</td>');
 					h.push('<td class="text-center"><strong class="' + (PlayerID === ExtPlayerID ? 'success' : '') + '">' + HTML.Format(Eigens[i]) + (EigenCounter > Eigens[i] ? ' <small>(=' + HTML.Format(EigenCounter) + ')</small>' : '') + '</strong></td>');
-                    h.push('<td colspan="5"></td>');
+                    h.push('<td colspan="7"></td>');
                     h.push('</tr>');
                 }
             }
@@ -808,15 +808,16 @@ let Parts = {
 
 			    if (fp_to_secure > fp_added) {
 			        h.push('<td class="text-center"><strong class="success">' + HTML.Format(fp_to_secure) + '</strong></td>');
+			        if (profit >= 0) {
+			            h.push('<td class="text-center"><strong class="success">' + HTML.Format(profit) + '</strong></td>');
+			        }
+			        else {
+			            h.push('<td class="text-center"><strong class="error">' + HTML.Format(profit) + '</strong></td>');
+			        }
 			    }
 			    else {
 			        h.push('<td class="text-center"><strong class="error">' + HTML.Format(fp_to_secure) + '</strong></td>');
-			    }
-			    if (profit >= 0) {
-			        h.push('<td class="text-center"><strong class="success">' + HTML.Format(profit) + '</strong></td>');
-			    }
-			    else {
-			        h.push('<td class="text-center"><strong class="error">' + HTML.Format(profit) + '</strong></td>');
+			        h.push('<td class="text-center"><strong class="info">x</strong></td>');
 			    }
 			} else{
 			    h.push('<td class="text-center"></strong></td>');
@@ -827,7 +828,6 @@ let Parts = {
 
             h.push('</tr>');
         }
-        console.log(Parts)
 
         let MaezenRest = 0;
 		for (let i = 5; i < Parts.Maezens.length; i++)
@@ -842,7 +842,7 @@ let Parts = {
 			h.push('<td>' + i18n('Boxes.OwnpartCalculator.Place') + ' 6' + (Parts.Maezens.length > 6 ? ('-' + Parts.Maezens.length) : '') + '</td>');
             h.push('<td class="text-center">-</td>');
 			h.push('<td class="text-center"><strong class="info">' + HTML.Format(MaezenRest) + '</strong></td>');
-            h.push('<td colspan="4"></td>');
+            h.push('<td colspan="6"></td>');
             h.push('</tr>');
         }
 

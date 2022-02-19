@@ -10,6 +10,96 @@
  *
  * **************************************************************************************
  */
+if(localStorage.GreatBuildingData == null) {
+    localStorage.GreatBuildingData = JSON.stringify({})
+}
+GB_LEVELS = JSON.parse(localStorage.GreatBuildingData);
+
+function update_gb_entry(parts) {
+    let gb_id = parts.CityMapEntity.cityentity_id
+    let level = parts.CityMapEntity.level || 0
+    if(GB_LEVELS[gb_id] == null) {
+        GB_LEVELS[gb_id] = {}
+    }
+    if(GB_LEVELS[gb_id][level] == null) {
+        data = {}
+        data.needed_fp = parts.CityMapEntity.state.forge_points_for_level_up;
+        data.rewards = []
+        j = 0;
+        for(i = 0; i < parts.Rankings.length; i++) {
+            if(parts.Rankings[i].reward != null) {
+                data.rewards[j] = parts.Rankings[i].reward.strategy_point_amount
+                j = j + 1;
+            }
+        }
+        GB_LEVELS[gb_id][level] = data
+        localStorage.GreatBuildingData = JSON.stringify(GB_LEVELS)
+    }
+}
+
+function get_gb_data(gb_id, level) {
+
+
+    if(GB_LEVELS[gb_id] == null) {
+        GB_LEVELS[gb_id] = {}
+    }
+    return GB_LEVELS[gb_id][level]
+
+}
+
+function update_gb_history(data) {
+    // Box in den DOM
+    let prev_element = document.getElementById("GBListBox");
+    if(prev_element) {prev_element.remove()};
+    player_name = data.responseData[0].player.name
+    HTML.Box({
+        id: 'GBListBox',
+        title: i18n(player_name + "'s GBs"),
+        auto_close: true,
+        dragdrop: true,
+        minimize: true,
+    })
+        let div = $('#GBListBox'),
+            h = [];
+
+        // Tabelle
+        h.push('<table id="GBInfoTable" class="info-table">');
+
+        h.push('<tbody></tbody>');
+        h.push('<tr><th>Name</th><th>Potential<br>profit</th>')
+
+
+    for(let i = 0; i < data.responseData.length; i++) {
+        h.push("<tr style='height:29px'>")
+        let gb = data.responseData[i]
+        let name = gb.name.length <= 16 && gb.name || gb.name.substring(0,13) + "..."
+        let level = gb.level || 0
+        let cur_fp = gb.current_progress || 0
+        let gb_data = get_gb_data(gb.city_entity_id, level)
+        h.push('<td>' + name + '</td>')
+        if (gb_data == null) {
+            h.push("<td bgcolor='red'>Unknown building/level</td>")
+        } else {
+            needed_fp = gb_data.needed_fp
+            fp_to_snipe = Math.ceil((needed_fp - cur_fp)/2, 0)
+            reward_p1 = Math.round(gb_data.rewards[0] * (1 + MainParser.ArkBonus/100), 0);
+            potential_profit = reward_p1 - fp_to_snipe
+			if (potential_profit >= 0) {
+			    text = '<font color = "green">' + HTML.Format(potential_profit) + '</font>'
+			}
+			else {
+			    text = '<font color = "red">' + HTML.Format(potential_profit) + '</font>'
+			}
+			h.push('<td class="text-center">' + text + '</strong></td>');
+        }
+        h.push('</tr>')
+    }
+
+    h.push('</table>');
+    div.find('#GBListBoxBody').html(h.join(''));
+    div.find('#GBListBox').html(h.join(''));
+    div.show()
+}
 
 {
 	// jQuery detection
@@ -967,6 +1057,7 @@ const FoEproxy = (function () {
 		let getConstruction = data.requestMethod === 'getConstruction' ? data : null;
 		let getConstructionRanking = data.requestMethod === 'getConstructionRanking' ? data : null;
 		let contributeForgePoints = data.requestMethod === 'contributeForgePoints' ? data : null;
+		let player_overview = data.requestMethod === 'getOtherPlayerOverview' ? data : null;
 		let Rankings, Bonus = {}, Era;
 
 		if (getConstruction != null) {
@@ -986,6 +1077,10 @@ const FoEproxy = (function () {
 			IsLevelScroll = false;
 		}
 
+		if (player_overview != null) {
+		    update_gb_history(data)
+		}
+
 		if (Rankings) {
 			if (!lgUpdateData || !lgUpdateData.CityMapEntity) {
 				lgUpdateData = { Rankings: Rankings, CityMapEntity: null, Bonus: null };
@@ -1000,7 +1095,6 @@ const FoEproxy = (function () {
 				if(lgUpdateData.Rankings && lgUpdateData.CityMapEntity){
 					if(!IsLevelScroll) MainParser.SendLGData(lgUpdateData);
 				}
-
 				lgUpdate();
 			}
 		}
@@ -1059,6 +1153,7 @@ const FoEproxy = (function () {
 			Parts.CityMapEntity = CityMapEntity.responseData[0];
 			Parts.Rankings = Rankings;
 			Parts.IsPreviousLevel = IsPreviousLevel;
+			update_gb_entry(Parts)
 
 			// das erste LG wurde geladen
 			$('#partCalc-Btn').removeClass('hud-btn-red');
