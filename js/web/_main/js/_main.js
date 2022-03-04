@@ -38,13 +38,10 @@ function update_gb_entry(parts) {
 }
 
 function get_gb_data(gb_id, level) {
-
-
     if(GB_LEVELS[gb_id] == null) {
         GB_LEVELS[gb_id] = {}
     }
     return GB_LEVELS[gb_id][level]
-
 }
 
 function update_gb_history(data) {

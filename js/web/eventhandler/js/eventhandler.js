@@ -11,6 +11,34 @@
  * **************************************************************************************
  */
 
+function printFriends() {
+    let players = Object.values(PlayerDict);
+    players.sort(function(a,b) { return b.Score - a.Score});
+    let j = 1
+    output = ""
+    for(let i=0; i<players.length; i++) {
+        if(players[i].IsFriend) {
+            output += j + "\t" + players[i].PlayerName + "\t" + players[i].Score + "\n";
+            j += 1;
+        }
+    }
+    console.log(output)
+}
+
+function printNeighbours() {
+    let players = Object.values(PlayerDict);
+    players.sort(function(a,b) { return b.Score - a.Score});
+    let j = 1
+    output = ""
+    for(let i=0; i<players.length; i++) {
+        if(players[i].IsNeighbor) {
+            output += j + "\t" + players[i].PlayerName + "\t" + players[i].Score + "\n";
+            j += 1;
+        }
+    }
+    console.log(output)
+}
+
 FoEproxy.addHandler('OtherPlayerService', 'getEventsPaginated', (data, postData) => {
     if (data.responseData['events'] && Settings.GetSetting('ShowPlayersMotivation')) {
         EventHandler.HandleEvents(data.responseData['events']);
