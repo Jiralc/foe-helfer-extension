@@ -734,7 +734,17 @@ let Parts = {
 
         let j = 0; // index excluding owner
 
-        for (let i = 0; i < 5; i++)
+	    let remaining = Total - (EigenStart + ExtTotal);
+	    let rewards = []
+	    let rankings = []
+	    for(let i = 0; i<Parts.Rankings.length; i++) {
+	        if(Parts.Rankings[i].rank != null && Parts.Rankings[i].rank <= 5 && Parts.Rankings[i].reward) {
+	            rewards.push(Parts.Rankings[i].reward.strategy_point_amount || 0)
+	            rankings.push(Parts.Rankings[i].forge_points || 0)
+	        }
+	    }
+        let profits = calculate_possible_profits(remaining, rewards, rankings)
+        for (let i = 0; i < rankings.length; i++)
         {
             EigenCounter += Eigens[i];
             if (i === 0 && EigenStart > 0)
@@ -797,7 +807,8 @@ let Parts = {
 			h.push('<td class="text-center"><input type="number" class="arc-percent-input" step="0.1" min="12" max="200" value="' + Parts.ArcPercents[i] + '"></td>');
 
 			let fp_reward = FPRewards[i];
-			if (Parts.Rankings && Parts.Rankings[j]) {
+
+			if (Parts.Rankings && Parts.Rankings.length > 0 && Parts.Rankings[j]) {
 			    if (Parts.Rankings[j].player.player_id == PlayerID) {
 			        j = j + 1;
 			    }
@@ -805,9 +816,8 @@ let Parts = {
 			    let needed_fp = Total;
 			    let owner_contribution = EigenStart
 			    let own_contrib = 0;
-			    let remaining = Total - (EigenStart + ExtTotal);
-			    let fp_to_secure = Math.round((remaining + fp_added - own_contrib)/2) + own_contrib
-			    let profit = fp_reward - fp_to_secure
+			    let fp_to_secure = profits[i].fp_to_secure
+			    let profit = profits[i].profit
 
 			    if (fp_to_secure > fp_added) {
 			        h.push('<td class="text-center"><strong class="success">' + HTML.Format(fp_to_secure) + '</strong></td>');

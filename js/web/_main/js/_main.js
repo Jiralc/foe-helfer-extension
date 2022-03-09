@@ -11,24 +11,60 @@
  * **************************************************************************************
  */
 if(localStorage.GreatBuildingData == null) {
-    localStorage.GreatBuildingData = JSON.stringify({})
 }
+console.log(localStorage.GreatBuildingData)
 GB_LEVELS = JSON.parse(localStorage.GreatBuildingData);
+
+
+function calculate_possible_profits(needed_fp, rewards, rankings) {
+    if(rankings == null) {rankings = []}
+    let profits = []
+    for(let i = 0; i < rewards.length; i++) {
+        let cur_added = 0
+        if(i < rankings.length) {
+            cur_added = rankings[i]
+        }
+        let fp_to_secure = Math.ceil((needed_fp + cur_added)/2, 0)
+        let reward = 0
+        if(reward != null) {
+            reward = rewards[i]
+        }
+        reward = Math.round(rewards[i] * (1 + MainParser.ArkBonus/100), 0);
+        profits.push({"fp_to_secure": fp_to_secure, "profit": reward - fp_to_secure})
+    }
+    return profits
+}
 
 function update_gb_entry(parts) {
     let gb_id = parts.CityMapEntity.cityentity_id
-    let level = parts.CityMapEntity.level || 0
-    if(GB_LEVELS[gb_id] == null) {
-        GB_LEVELS[gb_id] = {}
+    let total = 0
+    let level = 0
+	if (parts.IsPreviousLevel)
+	{
+		total = 0;
+		for (let i = 0; i < parts.Rankings.length; i++)
+		{
+			let ToAdd = Parts.Rankings[i].forge_points;
+			if (ToAdd !== undefined) total += ToAdd;
+		}
+	    level = GreatBuildings.GetLevel(gb_id, total) - 1;
+	} else {
+	    total = parseInt(parts.CityMapEntity.state.forge_points_for_level_up);
+	    level = parts.CityMapEntity.level || 0
+	}
+    if(GB_LEVELS[gb_id] == null) { GB_LEVELS[gb_id] = {}
     }
-    if(GB_LEVELS[gb_id][level] == null) {
+    if(GB_LEVELS[gb_id][level] == null || GB_LEVELS[gb_id][level].rewards.length < 5) {
         data = {}
-        data.needed_fp = parts.CityMapEntity.state.forge_points_for_level_up;
+        data.needed_fp = total;
         data.rewards = []
         j = 0;
         for(i = 0; i < parts.Rankings.length; i++) {
             if(parts.Rankings[i].reward != null) {
-                data.rewards[j] = parts.Rankings[i].reward.strategy_point_amount
+                data.rewards[j] = {};
+                data.rewards[j].forge_points = parts.Rankings[i].reward.strategy_point_amount || 0
+                data.rewards[j].medals = parts.Rankings[i].reward.resources.medals
+                data.rewards[j].blueprints = parts.Rankings[i].reward.blueprints || 0
                 j = j + 1;
             }
         }
@@ -77,10 +113,9 @@ function update_gb_history(data) {
         if (gb_data == null) {
             h.push("<td bgcolor='red'>Unknown building/level</td>")
         } else {
-            needed_fp = gb_data.needed_fp
-            fp_to_snipe = Math.ceil((needed_fp - cur_fp)/2, 0)
-            reward_p1 = Math.round(gb_data.rewards[0] * (1 + MainParser.ArkBonus/100), 0);
-            potential_profit = reward_p1 - fp_to_snipe
+            let rewards = gb_data.rewards.map(reward => reward.forge_points)
+            let profits = calculate_possible_profits(gb_data.needed_fp - cur_fp, rewards, null)
+            let potential_profit = profits[0].profit
 			if (potential_profit >= 0) {
 			    text = '<font color = "green">' + HTML.Format(potential_profit) + '</font>'
 			}
@@ -1061,6 +1096,7 @@ const FoEproxy = (function () {
 		let contributeForgePoints = data.requestMethod === 'contributeForgePoints' ? data : null;
 		let player_overview = data.requestMethod === 'getOtherPlayerOverview' ? data : null;
 		let Rankings, Bonus = {}, Era;
+
 
 		if (getConstruction != null) {
 			Rankings = getConstruction.responseData.rankings;
