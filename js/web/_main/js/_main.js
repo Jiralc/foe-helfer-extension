@@ -11,10 +11,112 @@
  * **************************************************************************************
  */
 if(localStorage.GreatBuildingData == null) {
+    localStorage.GreatBuildingData = JSON.stringify({})
 }
-console.log(localStorage.GreatBuildingData)
 GB_LEVELS = JSON.parse(localStorage.GreatBuildingData);
+if(localStorage.PlayerData == null) {
+    localStorage.PlayerData = JSON.stringify({})
+}
+PLAYER_DATA = JSON.parse(localStorage.PlayerData)
 
+function get_snipeable_gbs() {
+	let profit_threshold = -0.25  // print if profit/fp_to_secure is greater than this value
+	let timeout_threshold = 7*24*60*60*1000 // remove entry if no change in this time (milliseconds)
+
+	let snipeable_gbs = []
+
+	for(player_id in PLAYER_DATA) {
+		let player_name = PLAYER_DATA[player_id].player_name
+		if(player_name != null) {
+			for(gb_id in PLAYER_DATA[player_id].gbs) {
+				let gb = PLAYER_DATA[player_id].gbs[gb_id]
+				let gb_data = get_gb_data(gb_id, gb.level)
+				let needed_fp = gb_data.needed_fp - gb.cur_fp
+				let profits = calculate_possible_profits(needed_fp, gb_data.rewards, gb.rankings)
+				let profit = profits.reduce((a,b)=>(a.profit>b.profit && a.profit!=null)?a:b)
+				let fp_to_secure = profit.fp_to_secure
+				profit = profit.profit
+				if(Date.now() - gb.time > timeout_threshold) {
+					delete PLAYER_DATA[player_id].gbs[gb_id]
+				}
+				else if(profit != null && profit/fp_to_secure >= profit_threshold) {
+					snipe_data = {}
+					snipe_data.player_name = player_name
+					snipe_data.profit = profit
+					snipe_data.time = gb.time
+					snipe_data.gb_id = gb_id
+					snipe_data.cur_fp = gb.cur_fp
+					snipe_data.needed_fp = gb_data.needed_fp
+					snipe_data.spots = []
+					for(let i = 0; i<5; i+=1) {
+						fp_at_spot = (gb.rankings && gb.rankings[i]) || 0
+						reward_at_spot = (gb_data && gb_data.rewards && gb_data.rewards[i] && gb_data.rewards[i].forge_points) || 0
+						snipe_data.spots.push([fp_at_spot, reward_at_spot])
+					}
+					snipeable_gbs.push(snipe_data)
+				}
+			}
+		}
+	}
+	snipeable_gbs.sort(function(a, b){return b.profit - a.profit})
+	snipeable_gb_string = ""
+	for(let i = 0; i<snipeable_gbs.length; i+=1) {
+		gb = snipeable_gbs[i]
+		snipeable_gb_string += gb.player_name + "\t"
+		snipeable_gb_string += gb.time + "\t"
+		snipeable_gb_string += gb.gb_id + "\t"
+		snipeable_gb_string += gb.cur_fp + "\t"
+		snipeable_gb_string += gb.needed_fp + "\t"
+		snipeable_gb_string += gb.spots[0][0] + "\t"
+		snipeable_gb_string += gb.spots[0][1] + "\t"
+		snipeable_gb_string += gb.spots[1][0] + "\t"
+		snipeable_gb_string += gb.spots[1][1] + "\t"
+		snipeable_gb_string += gb.spots[2][0] + "\t"
+		snipeable_gb_string += gb.spots[2][1] + "\t"
+		snipeable_gb_string += gb.spots[3][0] + "\t"
+		snipeable_gb_string += gb.spots[3][1] + "\t"
+		snipeable_gb_string += gb.spots[4][0] + "\t"
+		snipeable_gb_string += gb.spots[4][1] + "\n"
+	}
+	return snipeable_gb_string + "\n end"
+}
+
+function add_player_gb_data(player, gb, rankings) {
+    let player_id = player.player_id
+    let gb_id = gb.city_entity_id
+    let gb_level = gb.level || 0
+    if(PLAYER_DATA[player_id] == null) {
+        PLAYER_DATA[player_id] = {gbs: {}}
+    }
+    let known_data = PLAYER_DATA[player_id] && PLAYER_DATA[player_id].gbs[gb_id] || {}
+    let should_update = false
+    if(known_data.level < gb_level) {
+        known_data = {}
+    }
+    else if(known_data > gb_level) {
+        return
+    }
+    PLAYER_DATA[player_id].player_name = player.name || PLAYER_DATA[player_id].player_name
+    known_data.cur_fp = gb.current_progress || 0
+    known_data.level = gb_level
+    known_data.time = Date.now()
+    if(rankings != null) {
+        new_rankings = []
+	    for (let i = 0; i < rankings.length; i++) {
+	        if(rankings[i].rank != null) {
+	            new_rankings.push(rankings[i].forge_points || 0)
+	        }
+		}
+		if(new_rankings != known_data.rankings) {
+		    should_update = true
+		    known_data.rankings = new_rankings
+		}
+    }
+    PLAYER_DATA[player_id].gbs[gb_id] = known_data
+    if(should_update) {
+        localStorage.PlayerData = JSON.stringify(PLAYER_DATA)
+    }
+}
 
 function calculate_possible_profits(needed_fp, rewards, rankings) {
     if(rankings == null) {rankings = []}
@@ -25,12 +127,17 @@ function calculate_possible_profits(needed_fp, rewards, rankings) {
             cur_added = rankings[i]
         }
         let fp_to_secure = Math.ceil((needed_fp + cur_added)/2, 0)
-        let reward = 0
-        if(reward != null) {
-            reward = rewards[i]
+        let reward = rewards[i] || 0
+        if(reward.forge_points != null) {
+            reward = reward.forge_points
         }
-        reward = Math.round(rewards[i] * (1 + MainParser.ArkBonus/100), 0);
-        profits.push({"fp_to_secure": fp_to_secure, "profit": reward - fp_to_secure})
+        reward = Math.round(reward + reward * MainParser.ArkBonus/100, 0)
+        if(fp_to_secure <= cur_added) {
+            profit = null
+        } else {
+            profit = reward - fp_to_secure
+        }
+        profits.push({"fp_to_secure": fp_to_secure, "profit": profit})
     }
     return profits
 }
@@ -84,22 +191,22 @@ function update_gb_history(data) {
     // Box in den DOM
     let prev_element = document.getElementById("GBListBox");
     if(prev_element) {prev_element.remove()};
-    player_name = data.responseData[0].player.name
+    let player = data.responseData[0].player
     HTML.Box({
         id: 'GBListBox',
-        title: i18n(player_name + "'s GBs"),
+        title: i18n(player.name + "'s GBs"),
         auto_close: true,
         dragdrop: true,
         minimize: true,
     })
-        let div = $('#GBListBox'),
-            h = [];
+    let div = $('#GBListBox'),
+        h = [];
 
-        // Tabelle
-        h.push('<table id="GBInfoTable" class="info-table">');
+    // Table
+    h.push('<table id="GBInfoTable" class="info-table">');
 
-        h.push('<tbody></tbody>');
-        h.push('<tr><th>Name</th><th>Potential<br>profit</th>')
+    h.push('<tbody></tbody>');
+    h.push('<tr><th>Name</th><th>Potential<br>profit</th>')
 
 
     for(let i = 0; i < data.responseData.length; i++) {
@@ -109,20 +216,29 @@ function update_gb_history(data) {
         let level = gb.level || 0
         let cur_fp = gb.current_progress || 0
         let gb_data = get_gb_data(gb.city_entity_id, level)
+        add_player_gb_data(player, gb)  // Also creates PLAYER_GB entry
+        let last_known_data = PLAYER_DATA[player.player_id].gbs[gb.city_entity_id] // guaranteed to exist because of ^
+        let last_known_rankings = last_known_data.rankings
+        if(last_known_data.level != level) {
+            last_known_rankings = null
+        }
         h.push('<td>' + name + '</td>')
         if (gb_data == null) {
             h.push("<td bgcolor='red'>Unknown building/level</td>")
         } else {
             let rewards = gb_data.rewards.map(reward => reward.forge_points)
-            let profits = calculate_possible_profits(gb_data.needed_fp - cur_fp, rewards, null)
-            let potential_profit = profits[0].profit
-			if (potential_profit >= 0) {
-			    text = '<font color = "green">' + HTML.Format(potential_profit) + '</font>'
+            let profits = calculate_possible_profits(gb_data.needed_fp - cur_fp, rewards, last_known_rankings)
+            let potential_profit = profits.reduce((a,b)=>(a.profit>b.profit && a.profit!=null)?a:b).profit //get max
+            if (potential_profit == null) {
+			    text = '<strong class="info">x</strong>'
+            }
+			else if (potential_profit >= 0) {
+			    text = '<strong><font color="#29b206">' + HTML.Format(potential_profit) + '</font></strong>'
 			}
 			else {
-			    text = '<font color = "red">' + HTML.Format(potential_profit) + '</font>'
+			    text = '<strong><font color="#ec4d4d">' + HTML.Format(potential_profit) + '</font></strong>'
 			}
-			h.push('<td class="text-center">' + text + '</strong></td>');
+			h.push('<td>' + text + '</td>');
         }
         h.push('</tr>')
     }
@@ -1193,6 +1309,14 @@ const FoEproxy = (function () {
 			Parts.Rankings = Rankings;
 			Parts.IsPreviousLevel = IsPreviousLevel;
 			update_gb_entry(Parts)
+            let player = {player_id: Parts.CityMapEntity.player_id}
+            let gb = {
+                      city_entity_id: Parts.CityMapEntity.cityentity_id,
+                      level: Parts.CityMapEntity.level,
+                      current_progress: Parts.CityMapEntity.state.invested_forge_points
+                      }
+            add_player_gb_data(player, gb, Parts.Rankings)
+
 
 			// das erste LG wurde geladen
 			$('#partCalc-Btn').removeClass('hud-btn-red');

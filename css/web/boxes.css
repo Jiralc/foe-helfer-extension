@@ -375,6 +375,26 @@ p {
 	color: var(--text-light);
 }
 
+strong {
+	color: var(--text-bright);
+}
+
+strong.normal {
+	color: var(--text-bright);
+}
+
+strong.success {
+	color: var(--text-success) !important;
+}
+
+strong.info {
+	color: var(--text-info) !important;
+}
+
+strong.error {
+	color: #ec4d4d !important;
+}
+
 .flex {
 	display: flex;
 	justify-content: center;
@@ -1565,3 +1585,4 @@ input[type="range"]::-webkit-slider-thumb {
 	box-shadow: 0 0 2px 0 var(--black-50), inset -1px -1px 3px var(--text-normal);
 	transition: background .3s ease-in-out;
 }
+
