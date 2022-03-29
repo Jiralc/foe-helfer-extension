@@ -39,6 +39,43 @@ GB_IDS = { //incomplete
 	"Hagia Sophia":"X_EarlyMiddleAge_Landmark1",
 }
 
+function get_friends() {
+    let players = Object.values(PlayerDict);
+    players.sort(function(a,b) { return b.Score - a.Score});
+    let j = 1
+    output = ""
+    for(let i=0; i<players.length; i++) {
+        player_id = players[i].PlayerID
+        if(PLAYER_DATA[player_id] == null) {
+            PLAYER_DATA[player_id] = {gbs: {}}
+        }
+        PLAYER_DATA[player_id].player_name = players[i].PlayerName
+        PLAYER_DATA[player_id].IsFriend = players[i].IsFriend || false
+        PLAYER_DATA[player_id].IsNeighbour = players[i].IsNeighbor || false
+        PLAYER_DATA[player_id].IsGuildMember = players[i].IsGuildMember || false
+        if(players[i].IsFriend) {
+            output += j + "\t" + players[i].PlayerName + "\t" + players[i].Score + "\n";
+            j += 1;
+        }
+    }
+    localStorage.PlayerData = JSON.stringify(PLAYER_DATA)
+    return output
+}
+
+function get_neighbours() {
+    let players = Object.values(PlayerDict);
+    players.sort(function(a,b) { return b.Score - a.Score});
+    let j = 1
+    output = ""
+    for(let i=0; i<players.length; i++) {
+        if(players[i].IsNeighbor) {
+            output += j + "\t" + players[i].PlayerName + "\t" + players[i].Score + "\n";
+            j += 1;
+        }
+    }
+    return output
+}
+
 function get_snipeable_gbs() {
 	let profit_threshold = -0.25  // print if profit/fp_to_secure is greater than this value
 	let timeout_threshold = 7*24*60*60*1000 // remove entry if no change in this time (milliseconds)
@@ -50,7 +87,6 @@ function get_snipeable_gbs() {
 		if(current_investments.hasOwnProperty(i))
 		{
 			if(current_investments[i] && PLAYER_DATA[current_investments[i].playerId] && PLAYER_DATA[current_investments[i].playerId].gbs[GB_IDS[current_investments[i].gbname]] != null) {
-				console.log(PLAYER_DATA[current_investments[i].playerId].player_name)
 				delete PLAYER_DATA[current_investments[i].playerId].gbs[GB_IDS[current_investments[i].gbname]]
 			}
 		}
@@ -58,7 +94,7 @@ function get_snipeable_gbs() {
 
 	for(player_id in PLAYER_DATA) {
 		let player_name = PLAYER_DATA[player_id].player_name
-		if(player_name != null && (PLAYER_DATA[player_id].IsFriend || PLAYER_DATA[player_id].IsNeighbour)) {
+		if(player_name != null && (PLAYER_DATA[player_id].IsFriend || PLAYER_DATA[player_id].IsNeighbour) && !PLAYER_DATA[player_id].IsGuildMember) {
 			for(gb_id in PLAYER_DATA[player_id].gbs) {
 				let gb = PLAYER_DATA[player_id].gbs[gb_id]
 				let gb_data = get_gb_data(gb_id, gb.level)
