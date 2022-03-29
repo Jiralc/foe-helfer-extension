@@ -19,18 +19,50 @@ if(localStorage.PlayerData == null) {
 }
 PLAYER_DATA = JSON.parse(localStorage.PlayerData)
 
+
+GB_IDS = { //incomplete
+	"Oracle of Delphi":"X_AllAge_Oracle",
+	"Lighthouse of Alexandria":"X_IronAge_Landmark2",
+	"Cathedral of Aachen":"X_EarlyMiddleAge_Landmark2",
+	"Tower of Babel":"X_BronzeAge_Landmark1",
+	"Galata Tower":"X_EarlyMiddleAge_Landmark3",
+	"Temple of Relics":"X_AllAge_Expedition",
+	"Statue of Zeus":"X_BronzeAge_Landmark2",
+	"Castel del Monte":"X_LateMiddleAge_Landmark3",
+	"Château Frontenac":"X_ProgressiveEra_Landmark2",
+	"Frauenkirche of Dresden":"X_ColonialAge_Landmark1",
+	"Arctic Orangery":"X_ArcticFuture_Landmark2",
+	"Observatory":"X_AllAge_EasterBonus4",
+	"Colosseum":"X_IronAge_Landmark1",
+	"The arc":"X_FutureEra_Landmark1",
+	"Alcatraz":"X_ProgressiveEra_Landmark1",
+	"Hagia Sophia":"X_EarlyMiddleAge_Landmark1",
+}
+
 function get_snipeable_gbs() {
 	let profit_threshold = -0.25  // print if profit/fp_to_secure is greater than this value
 	let timeout_threshold = 7*24*60*60*1000 // remove entry if no change in this time (milliseconds)
 
 	let snipeable_gbs = []
+	let current_investments = IndexDB.db.investhistory.reverse().toArray();
+	for (i in current_investments)
+	{
+		if(current_investments.hasOwnProperty(i))
+		{
+			if(current_investments[i] && PLAYER_DATA[current_investments[i].playerId] && PLAYER_DATA[current_investments[i].playerId].gbs[GB_IDS[current_investments[i].gbname]] != null) {
+				console.log(PLAYER_DATA[current_investments[i].playerId].player_name)
+				delete PLAYER_DATA[current_investments[i].playerId].gbs[GB_IDS[current_investments[i].gbname]]
+			}
+		}
+	}
 
 	for(player_id in PLAYER_DATA) {
 		let player_name = PLAYER_DATA[player_id].player_name
-		if(player_name != null) {
+		if(player_name != null && (PLAYER_DATA[player_id].IsFriend || PLAYER_DATA[player_id].IsNeighbour)) {
 			for(gb_id in PLAYER_DATA[player_id].gbs) {
 				let gb = PLAYER_DATA[player_id].gbs[gb_id]
 				let gb_data = get_gb_data(gb_id, gb.level)
+				if(gb_data == null) {continue}
 				let needed_fp = gb_data.needed_fp - gb.cur_fp
 				let profits = calculate_possible_profits(needed_fp, gb_data.rewards, gb.rankings)
 				let profit = profits.reduce((a,b)=>(a.profit>b.profit && a.profit!=null)?a:b)
@@ -58,6 +90,8 @@ function get_snipeable_gbs() {
 			}
 		}
 	}
+	investments = {}
+
 	snipeable_gbs.sort(function(a, b){return b.profit - a.profit})
 	snipeable_gb_string = ""
 	for(let i = 0; i<snipeable_gbs.length; i+=1) {
@@ -67,16 +101,12 @@ function get_snipeable_gbs() {
 		snipeable_gb_string += gb.gb_id + "\t"
 		snipeable_gb_string += gb.cur_fp + "\t"
 		snipeable_gb_string += gb.needed_fp + "\t"
-		snipeable_gb_string += gb.spots[0][0] + "\t"
-		snipeable_gb_string += gb.spots[0][1] + "\t"
-		snipeable_gb_string += gb.spots[1][0] + "\t"
-		snipeable_gb_string += gb.spots[1][1] + "\t"
-		snipeable_gb_string += gb.spots[2][0] + "\t"
-		snipeable_gb_string += gb.spots[2][1] + "\t"
-		snipeable_gb_string += gb.spots[3][0] + "\t"
-		snipeable_gb_string += gb.spots[3][1] + "\t"
-		snipeable_gb_string += gb.spots[4][0] + "\t"
-		snipeable_gb_string += gb.spots[4][1] + "\n"
+		for(let j = 0; j < 5; j+=1) {
+			for(let k = 0; k < 2; k+=1) {
+				snipeable_gb_string += gb.spots[j][k] + "\t"
+			}
+		}
+		snipeable_gb_string += "\n"
 	}
 	return snipeable_gb_string + "\n end"
 }
