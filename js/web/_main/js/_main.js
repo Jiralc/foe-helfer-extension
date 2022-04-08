@@ -97,17 +97,26 @@ function get_snipeable_gbs() {
 		if(player_name != null && (PLAYER_DATA[player_id].IsFriend || PLAYER_DATA[player_id].IsNeighbour) && !PLAYER_DATA[player_id].IsGuildMember) {
 			for(gb_id in PLAYER_DATA[player_id].gbs) {
 				let gb = PLAYER_DATA[player_id].gbs[gb_id]
+				if(Date.now() - gb.time > timeout_threshold) {
+					delete PLAYER_DATA[player_id].gbs[gb_id]
+					continue
+				}
+				if(gb.cur_fp == 0) {continue}
 				let gb_data = get_gb_data(gb_id, gb.level)
 				if(gb_data == null) {continue}
 				let needed_fp = gb_data.needed_fp - gb.cur_fp
 				let profits = calculate_possible_profits(needed_fp, gb_data.rewards, gb.rankings)
-				let profit = profits.reduce((a,b)=>(a.profit>b.profit && a.profit!=null)?a:b)
+				if(profits.length == 0) {continue}
+				let profit
+				if(profits.length == 1) {
+				    profit = profits[0]
+				} else {
+				    profit = profits.reduce((a,b)=>(a.profit>b.profit && a.profit!=null)?a:b)
+				}
+				if(profit == null) {continue}
 				let fp_to_secure = profit.fp_to_secure
 				profit = profit.profit
-				if(Date.now() - gb.time > timeout_threshold) {
-					delete PLAYER_DATA[player_id].gbs[gb_id]
-				}
-				else if(profit != null && profit/fp_to_secure >= profit_threshold) {
+				if(profit != null && profit/fp_to_secure >= profit_threshold) {
 					snipe_data = {}
 					snipe_data.player_name = player_name
 					snipe_data.profit = profit
