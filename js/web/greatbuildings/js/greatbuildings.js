@@ -409,9 +409,21 @@ let GreatBuildings =
                     GoodsProductions[j] = GBData.Rewards[j];
                     GoodsValue = GreatBuildings.GoodsValue0;
                 }
-                else if (GBData.ID === 'X_FutureEra_Landmark1') { // Arche
-                    let arc = 1 + MainParser.ArkBonus / 100;
-                    FPProductions[j] = GBData.Rewards[j] * GreatBuildings.RewardPerDay / arc;
+                else if (GBData.ID === 'X_FutureEra_Landmark1') { // Arc
+                    // let arc = 1 + MainParser.ArkBonus / 100;
+                    // FPProductions[j] = GBData.Rewards[j] * GreatBuildings.RewardPerDay / arc;
+                    total_fp_increase = 0
+                    cur_arc = 1 + MainParser.ArkBonus / 100
+                    goal_arc = 1 + GBData.Rewards[j]
+                    earliest_date = Object.values(AllFpRewards).reduce((prev, current) => (prev.date < current.date) ? prev : current).date
+                    days = Math.ceil((new Date().getTime() - earliest_date) / (1000*60*60*24))
+                    for(var id in AllFpRewards) {
+                      fp_reward = AllFpRewards[id];
+                      cur_reward = Math.round(fp_reward.fp * cur_arc)
+                      goal_reward = Math.round(fp_reward.fp * goal_arc)
+                      total_fp_increase += goal_reward - cur_reward
+                    }
+                    FPProductions[j] = total_fp_increase / days
                 }
                 else if (GBData.ID === 'X_AllAge_Expedition') { // Relikttempel
                     FPProductions[j] = GBData.FPProductions[j];
@@ -871,7 +883,11 @@ let GreatBuildings =
             let FPReward = Maezen[Rank - 1];
 
             GreatBuildings.FPRewards += FPReward;
+
+            let Maezen2 = GreatBuildings.GetMaezen(Reward, 0);
+            AllFpRewards[ID] = {fp: Maezen2[Rank - 1], date: EventHandler.ParseDate(Event['date']).getTime(), player: Event['other_player']['player_id']}
         }
+        localStorage.AllFpRewards = JSON.stringify(AllFpRewards)
     },
 
     RefreshDetailsVisible: (Index) => {
@@ -888,3 +904,10 @@ let GreatBuildings =
         });
     },
 };
+
+// Keeps track of all FP rewards spanning a week, deleting any older ones
+if(localStorage.AllFpRewards == null) {
+    localStorage.AllFpRewards = JSON.stringify({})
+}
+AllFpRewards = JSON.parse(localStorage.AllFpRewards)
+
